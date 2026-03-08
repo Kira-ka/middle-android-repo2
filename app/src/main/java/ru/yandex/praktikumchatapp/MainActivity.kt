@@ -25,11 +25,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -71,19 +73,22 @@ fun ChatScreen(
     modifier: Modifier = Modifier
 ) {
     val viewModel = remember { ChatViewModel() }
-    val messagesList = viewModel.messages.observeAsState(emptyList())
-    val messageText = remember { mutableStateOf("") }
-    // TODO Задание 3: добавьте focusRequester
+    val state = viewModel.state.collectAsState()
+    val focusRequester = remember { FocusRequester() }
+
+    if (state.value.isShouldShowKeyboard) {
+        LaunchedEffect(Unit){
+            focusRequester.requestFocus()
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
-
-        // Список сообщений
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp)
         ) {
-            items(messagesList.value) { message ->
+            items(state.value.messagesList) { message ->
                 when (message) {
                     is Message.MyMessage -> MyMessageCard(message)
                     is Message.OtherMessage -> OtherMessageCard(message)
@@ -95,26 +100,26 @@ fun ChatScreen(
         Row(
             modifier = Modifier
                 .padding(16.dp)
-                // TODO Задание 3: добавьте focusRequester
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BasicTextField(
-                value = messageText.value,
-                onValueChange = { messageText.value = it },
+                value = state.value.messageText,
+                onValueChange = { viewModel.updateMyMessage(it) },
                 modifier = Modifier
                     .weight(1f)
                     .padding(8.dp)
                     .background(Color.LightGray, shape = MaterialTheme.shapes.small)
-                    .padding(10.dp),
+                    .padding(10.dp)
+                    .focusRequester(focusRequester),
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Send
                 ),
                 keyboardActions = KeyboardActions(
                     onSend = {
-                        if (messageText.value.isNotBlank()) {
-                            viewModel.sendMyMessage(messageText.value)
-                            messageText.value = ""
+                        if (state.value.messageText.isNotBlank()) {
+                            viewModel.sendMyMessage(state.value.messageText)
+                            viewModel.updateMyMessage("")
                         }
                     }
                 )
@@ -122,9 +127,9 @@ fun ChatScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
-                    if (messageText.value.isNotBlank()) {
-                        viewModel.sendMyMessage(messageText.value)
-                        messageText.value = ""
+                    if (state.value.messageText.isNotBlank()) {
+                        viewModel.sendMyMessage(state.value.messageText)
+                        viewModel.updateMyMessage("")
                     }
                 }
             ) {

@@ -13,9 +13,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
 import org.mockito.Mockito.`when`
-import org.mockito.kotlin.verify
 import ru.yandex.praktikumchatapp.data.ChatApi
 import ru.yandex.praktikumchatapp.data.ChatRepository
 
@@ -39,7 +37,18 @@ class ChatRepositoryTest {
 
     @Test
     fun `getReplyMessage should return a non-empty string`() = runTest {
-        // TODO Задание 2: напишите юнит-тест
+        val replyText = "Hello"
+
+        `when`(chatApi.getReply())
+            .thenReturn(
+                flow {
+                    emit(replyText)
+                }
+            )
+        chatRepository.getReplyMessage().test {
+            assert(awaitItem() == replyText)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test
